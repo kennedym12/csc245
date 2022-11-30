@@ -1,0 +1,316 @@
+Script started on Mon 14 Nov 2022 09:30:35 PM EST
+]0;mays_ka@cobra:~/csc245/Project3[?1034h[mays_ka@cobra Project3]$ cat -n zip.cpp
+     1	#include <iostream>
+     2	#include <fstream>
+     3	#include <vector>
+     4	#include <sstream>
+     5	#include "huffman.h"
+     6	using namespace std;
+     7	
+     8	main(int argc, char** argv)
+     9	{
+    10	  //check for valid input here
+    11	  string f=rgv[1];
+    12	  ifstream file;
+    13	  string contents,temp;
+    14	  double numChars, numBits, ratio;
+    15	  file.open(f.c_str(),ios::in);
+    16	  if(file.is_open()){
+    17	    //reads in all content as a single string
+    18	    while(getline(file,temp)){
+    19	      contents+="\n"+temp;
+    20	    }
+    21	  } 
+    22	  HuffmanTree htree;
+    23	  vector<char> chars;
+    24	  cout<<contents<<endl;
+    25	  //check for the char in the map, adding its frequency each time
+    26	  for(int i=0;i<contents.size();i++){
+    27	    char ch=contents[i];
+    28	    if(htree.inTree(ch)){
+    29	      int nf=htree.GetFrequency(ch)+1;
+    30	      htree.SetFrequency(ch,nf);
+    31	    }
+    32	    else{
+    33	      htree.insert(ch,1);
+    34	      chars.push_back(ch);
+    35	    }
+    36	  }
+    37	  //build & check tree
+    38	   htree.build();
+    39	   htree.PrintTable();
+    40	   
+    41	  //create & write to .zip file
+    42	  string outfile=f+".zip";
+    43	  ofstream zfile;
+    44	  zfile.open(outfile.c_str(),ios::out);
+    45	  //append the number of encodings
+    46	  zfile<<chars.size()<<endl;
+    47	  //append the encoding map
+    48	  for(int i=0;i<chars.size();i++){
+    49	    //convert the char to ascii
+    50	    stringstream ss; string t; string code;
+    51	    int temp=int(chars[i]);
+    52	    ss<<temp;ss>>t;
+    53	    //retrieve its encodings
+    54	    code=htree.GetCode(chars[i]);
+    55	    //cout<<chars[i]<<" : "<<t<<" : "<<code<<endl;
+    56	    //append ascii & code line by line in the zip file
+    57	    zfile<<t<<" "<<code<<endl;
+    58	  }
+    59	  //append the data
+    60	  string encoding="";
+    61	  for(int i=0;i<contents.size();i++){
+    62	    string code=htree.GetCode(contents[i]);
+    63	    encoding+=code;
+    64	  }
+    65	  //cout<<"encoding: "<<encoding<<endl; 
+    66	  zfile<<encoding;
+    67	  //close the file
+    68	  zfile.close();
+    69	  //get the compression ratio
+    70	  numBits+=encoding.length();
+    71	  numChars=contents.length();
+    72	  ratio=1-(numBits/(numChars*8));
+    73	  cout<<"The file was successfully compressed to "<<numBits<<" bits or "<<ratio*100<<"% its original size"<<endl;
+    74	}
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ cat huffman.h
+#include <vector>
+#include <string>
+using namespace std;
+
+struct HNode {
+    char ch;
+    int weight;
+    int parent;
+    int childType;
+};
+
+class HuffmanTree {
+    public:
+	HuffmanTree();				// constructor
+
+	void insert(char ch, int weight);	// inserts a character and its associated weight
+						// into a node of the Huffman tree
+
+	bool inTree(char ch);			// returns a boolean value indicating whether
+						// a given character is stored in the tree
+		
+	int GetFrequency(char ch);		// returns the weight of a given character
+
+  void SetFrequency(char ch, int nf);//
+	
+	void build();				// Builds the Huffman Tree;
+	
+
+	string GetCode(char ch);		// returns the compressed code of a given
+						// character in the tree using recursion
+
+	void PrintTable(); 		// displays the Huffman encoding table used in
+						// the compression process
+	
+	int numNodes();				// returns the number of nodes currently in Huffman 
+						// tree
+
+    private:
+	vector<HNode> nodes;
+	int numChars;
+	bool built;                             
+	
+	int lookUp(char ch);			// returns the index of a given character in tree
+	int GetFrequency(int i);		// returns the weight at a given index
+	void SetFrequency(int i, int nf);   // sets the frequency of a char
+  string GetCode(int i);			// returns the compressed code of the character at 
+						// a given index
+};
+
+#include "huffman.cpp"
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ cat huffman.cpp
+#include <iostream>
+#include <vector>
+#include <iomanip>
+#include <sstream>
+using namespace std;
+
+HuffmanTree:: HuffmanTree()
+	: numChars(0), built(false) {}
+
+void HuffmanTree:: insert(char ch, int weight) {
+    HNode newNode = {ch, weight, -1, -1}; 
+    built = false;
+    nodes.push_back(newNode);
+    numChars++;
+
+}
+
+bool HuffmanTree:: inTree(char ch) {
+//loop through nodes vector, only returns true if the value is found
+	if(lookUp(ch)!=-1){
+   return true;
+  }
+	return false;
+}
+
+int HuffmanTree:: GetFrequency(char ch) {
+//searches for the index of a given char
+  int i = lookUp(ch);
+	return GetFrequency(i);
+}
+
+int HuffmanTree:: GetFrequency(int i) {
+//returns the weight of a node at the given index; end index returns 0
+	if(i==-1){
+		cout<<"This char isn't in the tree..."<<endl;
+		return 0;
+	}	
+	else{ 
+		return nodes[i].weight;
+	}
+} 
+
+void HuffmanTree:: SetFrequency(char ch, int f){
+//gets the index of the char whose freq to change
+  int i=lookUp(ch);
+  SetFrequency(i,f);
+}
+
+void HuffmanTree:: SetFrequency(int i, int f){
+//changes the frequency 
+  nodes[i].weight=f;
+}
+
+int HuffmanTree:: lookUp(char ch) {
+//returns the index of a char in nodes
+	for(int i=0;i<nodes.size(); i++){
+		if(nodes[i].ch==ch){return i;}
+	}
+	return -1;
+}
+
+string HuffmanTree:: GetCode(char ch) {
+//get the index of the char then get the encoding string
+  int i=lookUp(ch);
+  return GetCode(i);
+}
+
+
+string HuffmanTree:: GetCode(int i) {
+//use recursion to return the encoding string for a char
+  if(nodes[i].parent==-1){
+    return "";
+  }
+  stringstream ss;
+  int code=nodes[i].childType;
+  string encoding;
+  ss<<code;ss>>encoding;
+  return GetCode(nodes[i].parent)+encoding;
+} 
+
+void HuffmanTree:: PrintTable() {
+//print the char, weight, parent, & childType, preferable formatted well
+  cout<<endl;
+  cout<<"~~~~~~~~~~~~~~~~Huffman Table~~~~~~~~~~~~~~~~"<<endl;
+  cout<<setw(9)<<"Index"<<setw(6)<<"Char"<<setw(9)<<"Weight"<<setw(7)<<"Parent"<<setw(10)<<"ChildType"<<endl;
+  for(int i=0;i<nodes.size();i++){
+    string ch;
+    ch+=nodes[i].ch;
+    if(nodes[i].ch==32){ch="sp";}
+    if(nodes[i].ch==10){ch="nl";}
+    cout<<setw(5)<<i<<setw(7)<<ch<<setw(7)<<nodes[i].weight<<setw(7)<<nodes[i].parent<<setw(7)<<nodes[i].childType<<endl;
+  }
+  cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
+} 
+
+int HuffmanTree:: numNodes() {
+  //returns the number of nodes in nodes
+  return nodes.size();
+}
+
+void HuffmanTree:: build() {
+//create huffman tree using the nodes vector
+  int parentLess=numChars;
+  
+  //loop through until 1 nodes has parent=-1 (root)
+  while(parentLess!=1){
+    //cout<<"nodes w/o parents: "<<parentLess<<endl;
+     int a=-1;//default index that doesn't have a parent node
+    int b=-1;//different default index that doesn't have a parent node
+    int ind=0;
+    while(a<0 || b<0){
+      if(nodes[ind].parent==-1 & a<0){a=ind;}
+      else if(nodes[ind].parent==-1 & b<0){b=ind;}
+      ind++;
+    }
+    //loop through to find smallest 
+  for(int i=0;i<nodes.size(); i++){
+    if(i!=b){
+		if(nodes[i].weight<nodes[a].weight & nodes[i].parent==-1){
+      a=i;   
+    }
+    }
+	}
+   //loop through again checking every other for second smallest (allows for repeat weights)
+  for(int i=0;i<nodes.size(); i++){
+		if(i!=a){
+     if(nodes[i].weight<=nodes[b].weight & nodes[i].parent==-1){
+      b=i;   
+    }
+   }
+	}
+   //cout<<"children are: "<<a<<" & "<<b<<endl;
+   //create the parent node
+   int weight = nodes[a].weight+nodes[b].weight;
+   insert('T',weight);
+   
+   //set the children's parent loc to the last tree entry
+   nodes[a].parent=nodes.size()-1; nodes[a].childType=0;
+   nodes[b].parent=nodes.size()-1; nodes[b].childType=1;
+   
+   //decrement num of parentless nodes
+   parentLess-=1;
+  }
+  built=true;
+} 
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ c++ zip.cpp
+[01m[Kzip.cpp:[m[K In function ‘[01m[Kint main(int, char**)[m[K’:
+[01m[Kzip.cpp:11:12:[m[K [01;31m[Kerror: [m[K‘[01m[Krgv[m[K’ was not declared in this scope
+   string f=rgv[1];
+[01;32m[K            ^[m[K
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ c++ zip.cpp
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ mv a,[K.out myZip
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ c++ unzip.cpp
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ mv a.out myUnzip
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ mv a.out myUnzip[3Pc++ unzip.cppmv a.out myZip[3Pc++ zip.cppmv a.out myZip[1Pc++ unzip.cppmv a.out myUnzip[Kcat sample5
+MERCER 
+SOCCER
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ cat sample5mv a.out myUnzip[3Pc++ unzip.cppmv a.out myZip[3Pc++ zip.cpp
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ ./a[KmyZip sample5
+
+MERCER 
+SOCCER
+
+~~~~~~~~~~~~~~~~Huffman Table~~~~~~~~~~~~~~~~
+    Index  Char   Weight Parent ChildType
+    0     nl      2     10      0
+    1      M      1      9      1
+    2      E      3     12      0
+    3      R      3     12      1
+    4      C      3     11      1
+    5     sp      1      8      0
+    6      S      1      9      0
+    7      O      1      8      1
+    8      T      2     11      0
+    9      T      2     10      1
+   10      T      4     13      0
+   11      T      5     13      1
+   12      T      6     14      0
+   13      T      9     14      1
+   14      T     15     -1     -1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The file was successfully compressed to 43 bits or 64.1667% its original size
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ ./myUnzip sample5.zip
+File Successfully Inflated Back To Original.
+]0;mays_ka@cobra:~/csc245/Project3[mays_ka@cobra Project3]$ exit
+exit
+
+Script done on Mon 14 Nov 2022 09:33:03 PM EST
