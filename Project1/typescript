@@ -1,0 +1,566 @@
+Script started on Mon 26 Sep 2022 11:50:24 PM EDT
+]0;mays_ka@cobra:~/csc245/Project1[?1034h[mays_ka@cobra Project1]$ cat MoveFront.cpp
+#include "dlist.cpp"
+#include <iostream>
+#include <limits>
+using namespace std;
+
+//list client methods here
+void PrintMenu();
+void HeadInsert(DList<int>& d);
+void TailInsert(DList<int>& d);
+int AccessItem(DList<int>& d);
+void FindandMove(DList<int>& d, int i);
+void DeleteItem(DList<int>& d);
+void PrintList(const DList<int>& d);
+void PrintLength(const DList<int>& d);
+int input(char f);
+
+main()
+{
+  cout << "\033[2J\033[1;1H";//clears the screen
+	DList<int> list;
+	char sel;
+   
+  cout<<"Welcome to the Move to the Front Algorithm"<<endl;
+  do{
+    PrintMenu();
+    cin>>sel;
+    switch(toupper(sel)){
+      case 'H': HeadInsert(list); break;
+      case 'T': TailInsert(list); break;
+      case 'A': AccessItem(list); break;
+      case 'D': DeleteItem(list); break;
+      case 'P': PrintList(list); break;
+      case 'L': PrintLength(list); break;
+      case 'Q': cout<<"\tExiting Program...\n"; break;
+      default: cout<<"\tError, try entering a valid character"<<endl;
+    }
+  } while (toupper(sel)!='Q');
+}
+
+void PrintMenu(){
+  cout<<endl;
+  cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
+  cout<<"Please select a character from the selection below."<<endl;
+  cout<<"H - insert an integer at the head"<<endl;
+  cout<<"T - insert an integer at the end"<<endl;
+  cout<<"A - access an integer in the list"<<endl;
+  cout<<"D - delete an integer in the list"<<endl;
+  cout<<"P - print the list contents"<<endl;
+  cout<<"L - print the length of the list"<<endl;
+  cout<<"Q - quit the program"<<endl;
+  cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
+}
+
+void HeadInsert(DList<int>& d){
+	int i=input('h');
+  if(d.inList(i)){
+    cout<<"This integer is already in the list, try again"<<endl;
+  }
+  else{
+	  d.insertHead(i);
+     cout<<i<<" has been added to the beginning of the list"<<endl;
+  }
+}
+
+void TailInsert(DList<int>& d){
+	int i=input('t');
+  if(d.inList(i)){
+    cout<<"This integer is already in the list, try again"<<endl;
+  }
+  else{
+	  d.appendTail(i);
+     cout<<i<<" has been added to the end of the list"<<endl;
+   }
+}
+
+int AccessItem(DList<int>& d){
+	int i=input('a');
+  if(d.isEmpty()){
+    cout<<"This list is empty"<<endl;
+  }
+  else if(d.inList(i)){
+    FindandMove(d, i);
+    cout<<i<<" has been accessed and move to the front of the list"<<endl;
+  }
+  else{
+    cout<<i<<" is not in the list, try again"<<endl;
+  }
+}
+
+void FindandMove(DList<int>& d, int i){
+  d.moveItem(i);
+} 
+
+void DeleteItem(DList<int>& d){
+  int i=input('d');
+  if(d.isEmpty()){
+    cout<<"This list is empty"<<endl;
+  }
+  else if(d.inList(i)){
+    d.deleteItem(i);
+    cout<<i<<" has been deleted"<<endl;
+  }
+  else{
+    cout<<i<<" is not in the list, try again"<<endl;
+  }
+} 
+
+void PrintList(const DList<int>& d){
+  cout<<"Printing list contents to the screen..."<<endl;
+  d.print();
+}
+  
+void PrintLength(const DList<int>& d){
+  int len=d.lengthIs();
+  cout<<"This list has "<<len<<" integers"<<endl; 
+}
+
+//exception handling!!!!!!!!!!!
+int input(char f){
+  int i;
+  switch(f){
+    case 'h': cout<<"Integer to add to the beginning of the list: "; break;
+    case 't': cout<<"Integer to add to the end of the list: "; break;
+    case 'a': cout<<"Integer to access & move to front: "; break;
+    case 'd': cout<<"Integer to delete: "; break;
+    default: cout<<"";
+  }
+  cin>>i;
+  while(cin.fail()){
+    cin.clear();
+    cout<<"\tError, try entering an integer"<<endl;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+    cin>>i;
+  }
+  return i;
+}]0;mays_ka@cobra:~/csc245/Project1[mays_ka@cobra Project1]$ cat sli[K[K[Kdlist.h
+
+using namespace std;
+
+template <class ItemType>
+struct NodeType;
+
+template <class ItemType>
+class DList 
+{
+public :
+    DList ();		// Constructor
+    ~DList   ();  	// Destructor	
+
+    // Public Operations
+    void makeEmpty (); 
+    void deleteItem (ItemType item);
+    bool inList (ItemType item) const;	
+    bool isEmpty () const;  
+    void print() const; 
+    void insertHead (ItemType item); 
+    void appendTail (ItemType item); 
+    int lengthIs() const;
+    void moveItem(ItemType item);
+
+private :
+    // Private Attributes of a DList Object 
+    NodeType<ItemType>* head;
+    int length;
+
+    // Functions Called Solely By Public Functions, Not The Client 
+    NodeType<ItemType>* location(ItemType item) const;
+    NodeType<ItemType>* last() const; 
+    void deleteLocation (NodeType<ItemType>* delPtr);
+};
+
+//#include "dlist.cpp"
+]0;mays_ka@cobra:~/csc245/Project1[mays_ka@cobra Project1]$ cat dlist.cpp
+#include <cstddef> 
+#include <iostream>
+#include "dlist.h"
+
+using namespace std;
+
+template<class ItemType>
+struct NodeType
+{
+	ItemType info;
+	NodeType<ItemType>*	next;
+	NodeType<ItemType>*	back;
+};
+
+template <class ItemType>		
+DList<ItemType>::DList() 		// Class constructor
+{
+    length = 0;
+    head = NULL;
+}
+
+template <class ItemType>
+DList<ItemType>::~DList   ()		
+{
+	// Post: List is empty; All items have been deallocated.
+	//NodeType<ItemType> curr=head;
+	//while(curr!=NULL){
+	//	deleteLocation(curr);
+	//}
+}
+
+template <class ItemType>
+void DList<ItemType>::makeEmpty()
+{
+    // Post: List is empty; all items have been deallocated.
+	if(isEmpty()){cout<<"The list is already empty"<<endl;}
+	else{
+		NodeType<ItemType>* curr=head;
+		while(head!=NULL){
+			deleteLocation(head);
+		}
+	}
+}
+
+template <class ItemType>
+void DList<ItemType>::deleteItem (ItemType item)	
+{
+	//  Pre :  item to be deleted is passed in via parameter 
+        // Post :  item is deleted if it exists in list 
+	if(inList(item)){
+		NodeType<ItemType>* currLoc=location(item);
+		deleteLocation(currLoc);			
+	}
+	else{
+		cout<<"This item doesn't exist."<<endl;
+	}	
+}
+
+template <class ItemType>
+bool DList<ItemType>::inList (ItemType item) const
+{
+	//  Pre :  item to be located is passed in via parameter 
+        // Post :  function returns bool value if item is found 
+	NodeType<ItemType>* curr=head;
+	for(int i=0; i<length;i++){
+		if((curr->info)==item){
+			return true;
+		}
+		curr=curr->next;
+	}	
+	return false;
+}
+
+template <class ItemType>
+bool DList<ItemType>::isEmpty() const		
+{
+	// Post : function returns true if list is empty, false otherwise
+	return(head==NULL); 		
+}
+
+template <class ItemType>
+void DList<ItemType>::print() const	
+{
+	// Pre  : List is not empty 
+	// Post : Items in List have been printed to screen
+	NodeType<ItemType>* curr=head;
+	while(curr!=NULL){
+		cout<<curr->info<<" ";
+		curr=curr->next;
+	}
+	cout<<endl;
+}
+	
+template <class ItemType>
+void DList<ItemType>::insertHead(ItemType item)	
+{
+	//  Pre : item to be inserted is passed in via parameter
+        // Post : item is inserted at head of list;  Former first node is 
+        //        linked back to this new one via double link;
+        //        Length incremented;  Special case handled if list is empty 
+	NodeType<ItemType> *newHead=new NodeType<ItemType>;
+	newHead->info=item;
+	newHead->back=NULL;
+	newHead->next=head;
+	if(!isEmpty()){
+		head->back=newHead;
+	}
+	head=newHead;
+	length+=1;
+}
+
+template <class ItemType>
+void DList<ItemType>::appendTail(ItemType item)
+{
+	//  Pre :  item to be inserted is passed in via parameter
+        // Post :  item is added to tail of list; Former last node
+        //         is linked to this new one via double link 
+	NodeType<ItemType>* newLast=new NodeType<ItemType>;
+	newLast->info=item;
+	newLast->next=NULL;
+	NodeType<ItemType>* currLast=last();
+	newLast->back=currLast;
+	if(!isEmpty()){
+		currLast->next=newLast;
+	}
+	else{
+		head=newLast;
+	}
+	length+=1;
+}
+
+template <class ItemType>
+int DList<ItemType>::lengthIs() const	
+{
+	// Post : Function returns current length of list  
+	return length;
+}
+
+template <class ItemType>
+void DList<ItemType>::moveItem(ItemType item) 
+{
+  //moves the item, passed by parameter to the front of the list
+  if(inList(item)){
+    NodeType<ItemType>* loc=location(item);
+    NodeType<ItemType>* tempNext=loc->next;
+    
+    while(loc!=head){
+      loc->next=loc->back;//move selected item's pointers
+      loc->back=loc->back->back;
+      loc->next->back=loc;//move node that the selected node swaps with
+      loc->next->next=tempNext;
+      if(loc->next!=head){
+        loc->back->next=loc;//update left-most node
+      }
+      if(loc->next==head){
+        head=loc;
+      }
+      if(tempNext!=NULL){
+        tempNext->back=loc->next;//update right-most node
+      }
+    }
+	}
+	else{
+		cout<<"This item doesn't exist."<<endl;
+  }
+}
+
+template <class ItemType>
+NodeType<ItemType>* DList<ItemType>::location(ItemType item) const	
+{
+	//  Pre : item to be located is passed in via parameter 
+        // Post : function returns address of item being searched for --
+        //        if not found, NULL is returned  
+	NodeType<ItemType>* curr=head;
+	for(int i=0; i<length; i++){
+		if(curr->info==item){
+			return curr;//use ->next->back if needed
+		}
+		curr=curr->next;
+	}
+	return curr;//should return NULL
+}
+
+template <class ItemType>
+NodeType<ItemType>* DList<ItemType>::last() const	
+{
+	// Post : Function returns location of current last item in list
+	NodeType<ItemType>* currLast = head;
+	if(length==0){
+		return currLast;
+	}
+	while(currLast->next!=NULL){
+		currLast=currLast->next;
+	}	
+	return currLast;
+}
+
+template <class ItemType>
+void DList<ItemType>::deleteLocation (NodeType<ItemType>* delPtr)	
+{
+
+	//  Pre : Item to be deleted exits in list and its location
+        //        is passed in via parameter
+                   
+	// Post : Location passed in is removed from list;  Length
+        //        is decremented, and location is deallocated 
+
+        // Special Cases Handled for Deleting Only One Item in List,
+        // The Head Item of List, and the Tail Item of List
+	NodeType<ItemType>* curr=head;
+	NodeType<ItemType>* currLast=last();
+	if(length==0){
+		cout<<"There's no values in the list to delete"<<endl;
+	}
+	else if(delPtr==head & delPtr==currLast){//1 val in list
+		head=NULL;
+		delete delPtr;
+		length-=1;
+		cout<<"head & last are the same"<<endl;
+	}
+	else if(delPtr==head){
+		head=head->next;
+		head->back->next=NULL;
+		head->back=NULL;
+		delete delPtr;
+		length-=1;
+		cout<<"deleting the head"<<endl;
+	}
+	else if(delPtr==currLast){
+		currLast=currLast->back;
+		currLast->next->back=NULL;
+		currLast->next=NULL;
+		delete delPtr;
+		length-=1;	
+		cout<<"deleting the last"<<endl;
+	}
+	else{
+		while(curr->next!=NULL){
+			if(curr!=delPtr){
+				curr=curr->next;
+			}
+			else{
+				curr->next->back=curr->back;
+				curr->back->next=curr->next;
+				curr->next=NULL;
+				curr->back=NULL;
+				curr=curr->next;
+				delete delPtr;
+				length-=1;
+				cout<<"deleting some node in the middle"<<endl;
+				break;
+			}
+		}
+	}
+}
+]0;mays_ka@cobra:~/csc245/Project1[mays_ka@cobra Project1]$ c++ MoveFront.cpp
+]0;mays_ka@cobra:~/csc245/Project1[mays_ka@cobra Project1]$ ,.a,[K[K[K[K./a.out
+[2J[1;1HWelcome to the Move to the Front Algorithm
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Please select a character from the selection below.
+H - insert an integer at the head
+T - insert an integer at the end
+A - access an integer in the list
+D - delete an integer in the list
+P - print the list contents
+L - print the length of the list
+Q - quit the program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+h
+Integer to add to the beginning of the list: y
+	Error, try entering an integer
+g
+	Error, try entering an integer
+2
+2 has been added to the beginning of the list
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Please select a character from the selection below.
+H - insert an integer at the head
+T - insert an integer at the end
+A - access an integer in the list
+D - delete an integer in the list
+P - print the list contents
+L - print the length of the list
+Q - quit the program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+t
+Integer to add to the end of the list: o
+	Error, try entering an integer
+9
+9 has been added to the end of the list
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Please select a character from the selection below.
+H - insert an integer at the head
+T - insert an integer at the end
+A - access an integer in the list
+D - delete an integer in the list
+P - print the list contents
+L - print the length of the list
+Q - quit the program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+a
+Integer to access & move to front: 4
+4 is not in the list, try again
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Please select a character from the selection below.
+H - insert an integer at the head
+T - insert an integer at the end
+A - access an integer in the list
+D - delete an integer in the list
+P - print the list contents
+L - print the length of the list
+Q - quit the program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1
+	Error, try entering a valid character
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Please select a character from the selection below.
+H - insert an integer at the head
+T - insert an integer at the end
+A - access an integer in the list
+D - delete an integer in the list
+P - print the list contents
+L - print the length of the list
+Q - quit the program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+p
+Printing list contents to the screen...
+2 9 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Please select a character from the selection below.
+H - insert an integer at the head
+T - insert an integer at the end
+A - access an integer in the list
+D - delete an integer in the list
+P - print the list contents
+L - print the length of the list
+Q - quit the program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+a
+Integer to access & move to front: 9
+9 has been accessed and move to the front of the list
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Please select a character from the selection below.
+H - insert an integer at the head
+T - insert an integer at the end
+A - access an integer in the list
+D - delete an integer in the list
+P - print the list contents
+L - print the length of the list
+Q - quit the program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+l
+This list has 2 integers
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Please select a character from the selection below.
+H - insert an integer at the head
+T - insert an integer at the end
+A - access an integer in the list
+D - delete an integer in the list
+P - print the list contents
+L - print the length of the list
+Q - quit the program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+p
+Printing list contents to the screen...
+9 2 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Please select a character from the selection below.
+H - insert an integer at the head
+T - insert an integer at the end
+A - access an integer in the list
+D - delete an integer in the list
+P - print the list contents
+L - print the length of the list
+Q - quit the program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+q
+	Exiting Program...
+]0;mays_ka@cobra:~/csc245/Project1[mays_ka@cobra Project1]$ exit
+exit
+
+Script done on Mon 26 Sep 2022 11:52:20 PM EDT
