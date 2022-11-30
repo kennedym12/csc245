@@ -1,0 +1,340 @@
+Script started on Tue 18 Oct 2022 07:20:51 PM EDT
+]0;mays_ka@cobra:~/csc245/Project2[?1034h[mays_ka@cobra Project2]$ cat postfix.cpp
+#include <iostream>
+#include "stack.cpp"
+#include <string>
+#include <sstream>
+#include <iomanip>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+bool isValid(string s);
+
+main()
+{
+ char go='Y';
+ while(go=='Y'){
+  //create stack for evaluating
+  stack<int> eval(20);
+  
+  //accept user ~valid~ input
+  string input;
+  try{
+    getline(cin,input,';');
+    if(!isValid(input)){
+      throw(input);
+    }
+  }
+  catch(string in){
+    cout<<"This input is invalid, please try again..."<<endl;
+    cout<<"Valid characters: 1234567890 _+-*/%;"<<endl;
+    exit(0);
+  }
+  
+  //parse values & evaluate 
+  int ind=0;
+  int a,b;
+  string val;
+  input+=";";
+  
+  //evaluate the expression
+  while(ind<input.size())
+  {
+    int temp=ind;
+    switch(input[ind]){
+      case ' ':
+        ind++;
+        break;
+      case '_':
+        val+="-";
+        ind++;
+        break;
+      case '+':
+        a=eval.top();eval.pop();
+        b=eval.top();eval.pop();
+        cout<<"Token: +"<<setw(15)<<"Pop: "<<a<<setw(15)<<"Pop: "<<b;
+        cout<<setw(15)<<"Push: "<<b+a<<endl;
+        eval.push(b+a); ind++;
+        break;
+      case '-':
+        a=eval.top();eval.pop();
+        b=eval.top();eval.pop();
+        cout<<"Token: -"<<setw(15)<<"Pop: "<<a<<setw(15)<<"Pop: "<<b;
+        cout<<setw(15)<<"Push: "<<b-a<<endl;
+        eval.push(b-a); ind++;
+        break;
+      case '*':
+        a=eval.top();eval.pop();
+        b=eval.top();eval.pop();
+        cout<<"Token: *"<<setw(15)<<"Pop: "<<a<<setw(15)<<"Pop: "<<b;
+        cout<<setw(15)<<"Push: "<<b*a<<endl;
+        eval.push(b*a); ind++;
+        break;
+      case '/':
+        try{
+          a=eval.top();eval.pop();
+          b=eval.top();eval.pop();
+          cout<<"Token: /"<<setw(15)<<"Pop: "<<a<<setw(15)<<"Pop: "<<b;
+          if(a==0){
+            throw(0);
+          }
+          cout<<setw(15)<<"Push: "<<b/a<<endl;
+          eval.push(b/a); ind++;
+        }
+        catch(int n){
+          cout<<endl<<"Division by 0 Exception, try again..."<<endl;
+          exit(0);
+        }
+        break;
+      case '%':
+        a=eval.top();eval.pop();
+        b=eval.top();eval.pop();
+        cout<<"Token: %"<<setw(15)<<"Pop: "<<a<<setw(15)<<"Pop: "<<b;
+        cout<<setw(15)<<"Push: "<<b%a<<endl;
+        eval.push(b%a); ind++;
+        break; 
+      case ';':
+        a=eval.top();eval.pop();
+        cout<<"Token: ;"<<setw(15)<<"Pop: "<<a<<endl;
+        ind++;
+        break;
+      default://assume curr val at index is a digit, account for multi-num digit, & renew val
+        while(isdigit(input[ind])){
+          val+=input[ind];
+          ind++;
+        }
+        cout<<"Token: "<<val<<setw(15)<<"Push: "<<val<<endl;
+        stringstream num(val);
+        int x;
+        num >> x;
+        eval.push(x);
+        val="";
+        break;
+    }
+  }
+  //get valid input on whether to repeat the program without interferring with incoming expressions
+  try{
+    cout<<"Go again? (Y/N)"<<endl;
+    cin>>go;
+    if(go!='Y' && go!='N'){
+      throw(go);
+    }
+    cin.ignore();
+  }
+  catch(char g){
+    cout<<"Must enter 'Y' or 'N'..."<<endl;
+  }
+ }
+} 
+
+//method to check that string contents are valid
+bool isValid(string s)
+{
+  string val ="1234567890 _+-*/%;";
+  for(int i=0;i<s.size();i++){
+    if(val.find(s[i], 0)==string::npos){
+    cout<<s[i]<<" is invalid"<<endl;
+    return false;
+    }
+  }
+  return true;
+  
+}
+
+]0;mays_ka@cobra:~/csc245/Project2[mays_ka@cobra Project2]$ cat myBet.cpp
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <typeinfo>
+#include "stack.cpp"
+using namespace std;
+//construct BET
+struct BetNode
+{
+  char info;
+  BetNode* left;
+  BetNode* right;
+};
+
+string getPostfix(string s);
+int prec(char s);
+BetNode* getTree(string s);
+bool isOperator(char c);
+void preorder(BetNode* h);
+
+main()
+{
+  fstream newfile;
+  newfile.open("infix.dat",ios::in); 
+   if (newfile.is_open()){   
+      string exp;
+      while(getline(newfile, exp)){ 
+         cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
+         cout << "Infix Expression: "<<exp<<endl;//print orig expression
+         string fr=getPostfix(exp);
+         cout << "Postfix Expression: "<<fr << endl;//convert to postfix
+         stack<BetNode*> temp(20);          
+         BetNode* head=getTree(fr);
+         cout << "Binary Expression Tree Head: "<<head->info<<endl;//convert to BET
+         cout <<"Preorder Tree Traversal: ";
+         preorder(head);//print traversal
+         cout<<endl;
+         cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
+         
+      }
+      newfile.close(); 
+   }
+}
+
+string getPostfix(string s){//check each char then operate as usual
+  stack<char> temp(20);
+  string postfix="";
+  for(int i=0;i<s.size();i++){
+    if(s[i]=='*' || s[i]=='/' || s[i]=='+' || s[i]=='-'){
+      if(temp.isEmpty()){
+        temp.push(s[i]);
+        //cout<<"Push: "<<s[i]<<endl;
+      }
+      else{
+        while(prec(temp.top())>=prec(s[i]) && !temp.isEmpty()){
+          postfix = postfix+temp.top();
+          //cout<<"Pop: "<<temp.top()<<endl;
+          temp.pop();
+        }
+        temp.push(s[i]);
+      }
+    }
+    
+    if(s[i]=='('){
+      temp.push(s[i]);
+    }
+    
+    if(s[i]==')'){
+      while(temp.top()!='('){
+        postfix=postfix+temp.top();
+        temp.pop();
+      }
+      temp.pop();
+    }
+    
+    if(isdigit(s[i])){
+      postfix=postfix+s[i];
+    } 
+  }  
+  
+  while(!temp.isEmpty()){
+    postfix=postfix+temp.top();
+    temp.pop();
+  } 
+  return postfix;
+} 
+
+int prec(char s){
+  if(s=='*' || s=='/'){return 2;}
+  if(s=='+' || s=='-'){return 1;}
+  else{return 0;}
+} 
+
+BetNode* getTree(string s){
+  stack<BetNode*> temp(20);
+  
+  for(int i=0;i<s.size();i++){
+    BetNode* t=new BetNode;
+    t->info=s[i];
+    //cout<<t->info<<endl;
+    if(isOperator(s[i])){
+      t->right=temp.top();temp.pop();
+      t->left=temp.top();temp.pop();
+    }
+    else{
+      t->right=NULL;
+      t->left=NULL;
+    }
+    temp.push(t);
+  }
+  return temp.top();
+} 
+
+bool isOperator(char c){
+  string val ="+-*/";
+  
+  if(val.find(c, 0)==string::npos){
+    return false;
+  }
+  return true;
+}
+
+void preorder(BetNode* h){
+  if(h!=NULL){
+    cout<<h->info;
+    preorder(h->left);
+    preorder(h->right);
+  }
+  return;
+} ]0;mays_ka@cobra:~/csc245/Project2[mays_ka@cobra Project2]$ c++ postfix.cpp
+]0;mays_ka@cobra:~/csc245/Project2[mays_ka@cobra Project2]$ ./a.ot[Kut
+8 2_1 +/12 5*;
+Token: 8         Push: 8
+Token: 2         Push: 2
+Token: -1         Push: -1
+Token: +          Pop: -1          Pop: 2         Push: 1
+Token: /          Pop: 1          Pop: 8         Push: 8
+Token: 15         Push: 15
+Token: *          Pop: 15          Pop: 8         Push: 120
+Token: ;          Pop: 120
+Go again? (Y/N)
+Y
+_2_3+ 4/5-;
+Token: -2         Push: -2
+Token: -3         Push: -3
+Token: +          Pop: -3          Pop: -2         Push: -5
+Token: 4         Push: 4
+Token: /          Pop: 4          Pop: -5         Push: -1
+Token: 5         Push: 5
+Token: -          Pop: 5          Pop: -1         Push: -6
+Token: ;          Pop: -6
+Go again? (Y/N)
+1 0/;
+Must enter 'Y' or 'N'...
+]0;mays_ka@cobra:~/csc245/Project2[mays_ka@cobra Project2]$ ./a.out
+a 0   1 0; /;
+Token: 1         Push: 1
+Token: 0         Push: 0
+Token: /          Pop: 0          Pop: 1
+Division by 0 Exception, try again...
+]0;mays_ka@cobra:~/csc245/Project2[mays_ka@cobra Project2]$ ./a.out
+8 2 &;
+& is invalid
+This input is invalid, please try again...
+Valid characters: 1234567890 _+-*/%;
+]0;mays_ka@cobra:~/csc245/Project2[mays_ka@cobra Project2]$ c++ myBest[K[Kt.cpp
+]0;mays_ka@cobra:~/csc245/Project2[mays_ka@cobra Project2]$ ./a.out
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Infix Expression: (3 + 4)
+Postfix Expression: 34+
+Binary Expression Tree Head: +
+Preorder Tree Traversal: +34
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Infix Expression: ((5 + 4) * 8)
+Postfix Expression: 54+8*
+Binary Expression Tree Head: *
+Preorder Tree Traversal: *+548
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Infix Expression: ((0 * (1 + 2)) / (3 - (4  +  5))  *  (6 / 7 / (8 * 9)))
+Postfix Expression: 012+*345+-/67/89*/*
+Binary Expression Tree Head: *
+Preorder Tree Traversal: */*0+12-3+45//67*89
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Infix Expression: (1 - 3 * (4 + 5 * 6) + 7)
+Postfix Expression: 13456*+*-7+
+Binary Expression Tree Head: +
+Preorder Tree Traversal: +-1*3+4*567
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+]0;mays_ka@cobra:~/csc245/Project2[mays_ka@cobra Project2]$ exit
+exit
+
+Script done on Tue 18 Oct 2022 07:23:06 PM EDT
